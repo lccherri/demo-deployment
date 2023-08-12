@@ -1,0 +1,69 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: customer
+  namespace: demo-ossm
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: customer
+    version: v1
+  name: customer-v1
+  namespace: demo-ossm
+spec:
+  selector:
+    matchLabels:
+      app: customer
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: customer
+        version: v1
+    spec:
+      serviceAccount: customer
+      containers:
+      - name: customer
+        image: quay.io/lcherri/demo-app-servicemesh:1.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        env:
+        - name: RESPONSE_MESSAGE
+          value: "Customer V1"
+        # - name: FORWARD_TO
+        #   value: "http://order/"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: customer
+  namespace: demo-ossm
+  labels:
+    app: customer
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  selector:
+    app: customer
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: customer
+  namespace: demo-ossm
+  labels:
+    app: customer
+spec:
+  port:
+    targetPort: 8080
+  to:
+    kind: Service
+    name: customer
